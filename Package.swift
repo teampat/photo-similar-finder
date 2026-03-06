@@ -10,6 +10,10 @@ let package = Package(
         .executableTarget(
             name: "PhotoSimilarFinder",
             path: "PhotoSimilarFinder",
+            exclude: [
+                "Info.plist",
+                "PhotoSimilarFinder.entitlements",
+            ],
             linkerSettings: [
                 .linkedFramework("QuickLookThumbnailing"),
                 .linkedFramework("Vision"),
