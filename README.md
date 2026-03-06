@@ -15,7 +15,7 @@ A macOS app that groups similar photos and burst shots from your camera, making 
 ## Features
 
 ### Photo Grouping
-- **Same filename stem** — Files sharing the same stem (e.g. `IMG_0001.JPG` + `IMG_0001.CR3`) are merged as one shot.
+- **Same filename** — Files sharing the same filename (e.g. `IMG_0001.JPG` + `IMG_0001.CR3`) are merged as one shot.
 - **Visual similarity (Neural Engine)** — Uses Apple's Vision framework to compute AI feature prints and group visually similar photos, even with different filenames.
 
 ### Supported Formats

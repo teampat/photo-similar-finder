@@ -168,6 +168,14 @@ struct PreviewView: View {
         .frame(minWidth: 800, minHeight: 600)
         .focusable()
         .focused($isFocused)
+        .onKeyPress(.escape) {
+            if let win = NSApp.keyWindow, win.styleMask.contains(.fullScreen) {
+                win.toggleFullScreen(nil)
+            } else {
+                closeAction()
+            }
+            return .handled
+        }
         .onKeyPress(.leftArrow) {
             navigateSlot(by: -1); return .handled
         }
