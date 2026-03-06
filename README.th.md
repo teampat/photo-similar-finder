@@ -8,6 +8,8 @@
 ![Swift](https://img.shields.io/badge/Swift-6-orange)
 ![Arch](https://img.shields.io/badge/arch-Apple%20Silicon-black)
 
+![App Screenshot](app-screenshot.webp)
+
 ---
 
 ## คุณสมบัติ
