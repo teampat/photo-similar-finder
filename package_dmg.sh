@@ -24,8 +24,9 @@ BUILD_DIR="$PROJ_DIR/.build/release"
 DIST_DIR="$PROJ_DIR/dist"
 STAGING_DIR="$DIST_DIR/staging"
 APP_BUNDLE="$STAGING_DIR/$APP_NAME.app"
-DMG_OUT="$DIST_DIR/${APP_NAME}-${VERSION}.dmg"
-DMG_TMP="$DIST_DIR/${APP_NAME}-tmp.dmg"
+DMG_FILENAME="photo-similar-finder-${VERSION}.dmg"
+DMG_OUT="$DIST_DIR/${DMG_FILENAME}"
+DMG_TMP="$DIST_DIR/photo-similar-finder-tmp.dmg"
 DMG_VOLUME="$APP_NAME $VERSION"
 
 echo "════════════════════════════════════════════"
@@ -94,12 +95,44 @@ cat > "$APP_BUNDLE/Contents/Info.plist" << PLIST
     <false/>
     <key>NSSupportsSuddenTermination</key>
     <false/>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
 </dict>
 </plist>
 PLIST
 
 # Write PkgInfo
 printf "APPL????" > "$APP_BUNDLE/Contents/PkgInfo"
+
+# Generate AppIcon.icns from app-icon.png (if source exists)
+ICON_PNG="$PROJ_DIR/app-icon.png"
+ICON_SRC="$PROJ_DIR/PhotoSimilarFinder/AppIcon.icns"
+if [[ -f "$ICON_PNG" ]]; then
+    ICONSET_TMP="$(mktemp -d)/AppIcon.iconset"
+    mkdir -p "$ICONSET_TMP"
+    sips -z 16 16     "$ICON_PNG" --out "$ICONSET_TMP/icon_16x16.png"     &>/dev/null
+    sips -z 32 32     "$ICON_PNG" --out "$ICONSET_TMP/icon_16x16@2x.png"  &>/dev/null
+    sips -z 32 32     "$ICON_PNG" --out "$ICONSET_TMP/icon_32x32.png"      &>/dev/null
+    sips -z 64 64     "$ICON_PNG" --out "$ICONSET_TMP/icon_32x32@2x.png"  &>/dev/null
+    sips -z 128 128   "$ICON_PNG" --out "$ICONSET_TMP/icon_128x128.png"   &>/dev/null
+    sips -z 256 256   "$ICON_PNG" --out "$ICONSET_TMP/icon_128x128@2x.png" &>/dev/null
+    sips -z 256 256   "$ICON_PNG" --out "$ICONSET_TMP/icon_256x256.png"   &>/dev/null
+    sips -z 512 512   "$ICON_PNG" --out "$ICONSET_TMP/icon_256x256@2x.png" &>/dev/null
+    sips -z 512 512   "$ICON_PNG" --out "$ICONSET_TMP/icon_512x512.png"   &>/dev/null
+    cp "$ICON_PNG"                    "$ICONSET_TMP/icon_512x512@2x.png"
+    iconutil -c icns "$ICONSET_TMP" -o "$ICON_SRC"
+    rm -rf "$(dirname "$ICONSET_TMP")"
+    echo "  ✓ App icon generated from app-icon.png"
+elif [[ -f "$ICON_SRC" ]]; then
+    echo "  ✓ App icon found (pre-built)"
+else
+    echo "  ⚠ No app-icon.png or AppIcon.icns found — skipping icon"
+fi
+
+# Copy icon into bundle
+if [[ -f "$ICON_SRC" ]]; then
+    cp "$ICON_SRC" "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
+fi
 
 echo "  ✓ .app bundle ready: $APP_BUNDLE"
 echo ""
@@ -157,7 +190,31 @@ hdiutil attach "$DMG_TMP" -mountpoint "$MOUNT_POINT" -nobrowse -quiet
 # Add a symlink to /Applications for drag-and-drop install
 ln -sf /Applications "$MOUNT_POINT/Applications"
 
-# Set icon positions and background via AppleScript (optional window cosmetics)
+# Generate dark gradient background image (540×380) using Python stdlib — no deps needed
+python3 << 'PYEOF'
+import struct, zlib
+W, H = 540, 380
+def chunk(tag, data):
+    return struct.pack('>I', len(data)) + tag + data + struct.pack('>I', zlib.crc32(tag + data) & 0xFFFFFFFF)
+rows = []
+for y in range(H):
+    t = y / (H - 1)
+    r = int(0x1a + t * (0x28 - 0x1a))
+    g = int(0x1a + t * (0x28 - 0x1a))
+    b = int(0x2a + t * (0x3c - 0x2a))
+    rows.append(b'\x00' + bytes([r, g, b] * W))
+png  = b'\x89PNG\r\n\x1a\n'
+png += chunk(b'IHDR', struct.pack('>IIBBBBB', W, H, 8, 2, 0, 0, 0))
+png += chunk(b'IDAT', zlib.compress(b''.join(rows), 9))
+png += chunk(b'IEND', b'')
+with open('/tmp/dmg_bg.png', 'wb') as f:
+    f.write(png)
+PYEOF
+mkdir -p "$MOUNT_POINT/.background"
+cp /tmp/dmg_bg.png "$MOUNT_POINT/.background/background.png"
+rm -f /tmp/dmg_bg.png
+
+# Set icon layout and background via AppleScript
 osascript << APPLESCRIPT 2>/dev/null || true
 tell application "Finder"
   tell disk "$DMG_VOLUME"
@@ -165,12 +222,14 @@ tell application "Finder"
     set current view of container window to icon view
     set toolbar visible of container window to false
     set statusbar visible of container window to false
-    set the bounds of container window to {400, 100, 900, 400}
+    set the bounds of container window to {200, 150, 740, 530}
     set viewOptions to the icon view options of container window
     set arrangement of viewOptions to not arranged
-    set icon size of viewOptions to 100
-    set position of item "${APP_NAME}.app" of container window to {130, 150}
-    set position of item "Applications" of container window to {370, 150}
+    set icon size of viewOptions to 128
+    set text size of viewOptions to 12
+    set background picture of viewOptions to POSIX file "$MOUNT_POINT/.background/background.png"
+    set position of item "${APP_NAME}.app" of container window to {155, 190}
+    set position of item "Applications" of container window to {385, 190}
     close
     open
     update without registering applications
@@ -212,3 +271,7 @@ echo ""
 
 # Open dist folder in Finder
 open "$DIST_DIR"
+
+# Cleanup: remove staging folder and old-named DMG files
+rm -rf "$STAGING_DIR"
+rm -f "$DIST_DIR/${APP_NAME}-${VERSION}.dmg"
