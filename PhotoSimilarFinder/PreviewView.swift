@@ -80,7 +80,7 @@ struct PreviewView: View {
 
                 // Filename + photo counter (center)
                 VStack(spacing: 2) {
-                    Text(currentFile?.filename ?? "")
+                    Text(currentFile?.stem ?? "")
                         .font(.headline)
                         .lineLimit(1)
                     if displaySlots.count > 1 {

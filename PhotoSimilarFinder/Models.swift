@@ -73,11 +73,17 @@ struct ImageGroup: Identifiable {
         }
         return stemOrder.compactMap { stem -> DisplaySlot? in
             guard let stemFiles = byStem[stem], let first = stemFiles.first else { return nil }
-            let primary = stemFiles.first(where: { $0.isJpeg })
-                ?? stemFiles.first(where: { !$0.isRaw })
+            // Sort: RAW first, then JPEG, then others — used for both primaryFile and display order
+            let sorted = stemFiles.sorted {
+                if $0.isRaw != $1.isRaw { return $0.isRaw }
+                if $0.isJpeg != $1.isJpeg { return !$0.isJpeg }
+                return false
+            }
+            let primary = sorted.first(where: { $0.isRaw })
+                ?? sorted.first(where: { $0.isJpeg })
                 ?? first
             let idx = files.firstIndex(where: { $0.id == primary.id }) ?? 0
-            return DisplaySlot(id: primary.id, primaryFile: primary, allFiles: stemFiles, fileIndex: idx)
+            return DisplaySlot(id: primary.id, primaryFile: primary, allFiles: sorted, fileIndex: idx)
         }
     }
 }
