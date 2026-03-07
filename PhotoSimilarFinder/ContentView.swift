@@ -58,6 +58,8 @@ struct ContentView: View {
         } detail: {
             if state.groups.isEmpty && !state.isScanning {
                 EmptyStateView(state: state)
+            } else if state.showAllPhotos {
+                AllPhotosView(state: state)
             } else if let idx = state.selectedGroupIndex, idx < state.groups.count {
                 GroupDetailView(state: state, groupIndex: idx)
             } else {
@@ -124,9 +126,43 @@ struct SidebarView: View {
 
             // Group list
             if !state.groups.isEmpty {
-                // "All Photos" row — selected by default; shows the group overview grid
+                // "All Photos" row — shows every photo in the folder
+                Button {
+                    state.showAllPhotos = true
+                    state.selectedGroupIndex = nil
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "photo.fill.on.rectangle.fill")
+                            .font(.system(size: 20))
+                            .frame(width: 52, height: 52)
+                            .background(Color.purple.opacity(0.15))
+                            .cornerRadius(6)
+                            .foregroundColor(.purple)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("All Photos")
+                                .font(.system(size: 13, weight: .semibold))
+                            Text("\(state.totalShots) photos")
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                    }
+                    .padding(.vertical, 2)
+                    .padding(.horizontal, 6)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(state.showAllPhotos ? Color.purple.opacity(0.2) : Color.clear)
+                )
+                .padding(.horizontal, 6)
+                .padding(.top, 4)
+
+                // "All Groups" row — shows the group overview grid
                 Button {
                     state.selectedGroupIndex = nil
+                    state.showAllPhotos = false
                 } label: {
                     HStack(spacing: 10) {
                         Image(systemName: "photo.on.rectangle.angled")
@@ -151,10 +187,44 @@ struct SidebarView: View {
                 .buttonStyle(.plain)
                 .background(
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(state.selectedGroupIndex == nil ? Color.accentColor.opacity(0.2) : Color.clear)
+                        .fill(!state.showAllPhotos && state.selectedGroupIndex == nil ? Color.accentColor.opacity(0.2) : Color.clear)
                 )
                 .padding(.horizontal, 6)
-                .padding(.top, 4)
+
+                // "No Similar Matches" row — shown at same level as All Groups if present
+                if let ungroupedIndex = state.groups.indices.first(where: { state.groups[$0].groupLabel.hasPrefix("No Similar") }) {
+                    let ungrouped = state.groups[ungroupedIndex]
+                    Button {
+                        state.showAllPhotos = false
+                        state.selectedGroupIndex = ungroupedIndex
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "photo.badge.checkmark")
+                                .font(.system(size: 20))
+                                .frame(width: 52, height: 52)
+                                .background(Color.secondary.opacity(0.12))
+                                .cornerRadius(6)
+                                .foregroundColor(.secondary)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("No Similar Matches")
+                                    .font(.system(size: 13, weight: .semibold))
+                                Text("\(ungrouped.displaySlots.count) photos")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                        }
+                        .padding(.vertical, 2)
+                        .padding(.horizontal, 6)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(state.selectedGroupIndex == ungroupedIndex ? Color.accentColor.opacity(0.2) : Color.clear)
+                    )
+                    .padding(.horizontal, 6)
+                }
 
                 GroupListView(state: state)
             } else if state.isScanning {
@@ -221,22 +291,22 @@ struct GroupListView: View {
     var body: some View {
         List(selection: Binding(
             get: { state.selectedGroupIndex },
-            set: { state.selectedGroupIndex = $0 }
+            set: { state.selectedGroupIndex = $0; if $0 != nil { state.showAllPhotos = false } }
         )) {
             ForEach(Array(state.groups.enumerated()), id: \.offset) { index, group in
-                GroupListRow(group: group, index: index)
-                    .tag(index)
-                    .listRowInsets(EdgeInsets(top: 3, leading: 6, bottom: 3, trailing: 6))
-                    // single click — select group (detail panel updates automatically)
-                    .onTapGesture(count: 1) {
-                        state.selectedGroupIndex = index
-                    }
-                    // double click — open full preview window
-                    .simultaneousGesture(
-                        TapGesture(count: 2).onEnded {
-                            state.openPreview(groupIndex: index)
+                if !group.groupLabel.hasPrefix("No Similar") {
+                    GroupListRow(group: group, index: index)
+                        .tag(index)
+                        .listRowInsets(EdgeInsets(top: 3, leading: 6, bottom: 3, trailing: 6))
+                        .onTapGesture(count: 1) {
+                            state.selectedGroupIndex = index
                         }
-                    )
+                        .simultaneousGesture(
+                            TapGesture(count: 2).onEnded {
+                                state.openPreview(groupIndex: index)
+                            }
+                        )
+                }
             }
         }
         .listStyle(.sidebar)
@@ -256,7 +326,7 @@ struct GroupListRow: View {
                 .clipped()
 
             VStack(alignment: .leading, spacing: 3) {
-                Text("Group \(index + 1)")
+                Text(group.groupLabel.hasPrefix("No Similar") ? group.groupLabel : "Group \(index)")
                     .font(.system(size: 13, weight: .semibold))
                     .lineLimit(1)
 

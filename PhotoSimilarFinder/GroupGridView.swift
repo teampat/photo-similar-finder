@@ -126,7 +126,7 @@ struct GroupCardView: View {
 
             // Label
             VStack(alignment: .leading, spacing: 2) {
-                Text("Group \(groupIndex + 1)")
+                Text(group.groupLabel.hasPrefix("No Similar") ? group.groupLabel : "Group \(groupIndex)")
                     .font(.caption.bold())
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -186,7 +186,7 @@ struct GroupDetailView: View {
             }
             .padding(20)
         }
-        .navigationTitle("Group \(groupIndex + 1)")
+        .navigationTitle(group.groupLabel.hasPrefix("No Similar") ? group.groupLabel : "Group \(groupIndex)")
         .navigationSubtitle("\(group.displaySlots.count) photos  ·  \(formatBytes(group.totalSize))")
         .toolbar {
             ToolbarItemGroup(placement: .navigation) {
@@ -324,6 +324,43 @@ struct GroupDetailCard: View {
         .onTapGesture { onTap() }
         .task(id: slot.primaryFile.url) {
             thumb = await ImageProcessor.loadThumbnail(url: slot.primaryFile.url, size: 320)
+        }
+    }
+}
+
+// MARK: - All Photos View
+
+struct AllPhotosView: View {
+    @ObservedObject var state: AppState
+
+    private var columns: [GridItem] {
+        [GridItem(.adaptive(minimum: state.thumbnailSize, maximum: state.thumbnailSize * 1.3), spacing: 16)]
+    }
+
+    /// All display slots across all groups, sorted by filename
+    private var allEntries: [(groupIndex: Int, slot: DisplaySlot)] {
+        state.groups.enumerated().flatMap { (gi, group) in
+            group.displaySlots.map { (groupIndex: gi, slot: $0) }
+        }.sorted { $0.slot.primaryFile.filename.localizedStandardCompare($1.slot.primaryFile.filename) == .orderedAscending }
+    }
+
+    var body: some View {
+        ScrollView {
+            LazyVGrid(columns: columns, spacing: 16) {
+                ForEach(allEntries, id: \.slot.id) { entry in
+                    GroupDetailCard(slot: entry.slot, size: state.thumbnailSize) {
+                        state.openPreview(groupIndex: entry.groupIndex, fileIndex: entry.slot.fileIndex)
+                    }
+                }
+            }
+            .padding(20)
+        }
+        .navigationTitle("All Photos")
+        .navigationSubtitle("\(allEntries.count) photos")
+        .toolbar {
+            ToolbarItem(placement: .automatic) {
+                ThumbnailSizeSlider(thumbnailSize: $state.thumbnailSize)
+            }
         }
     }
 }

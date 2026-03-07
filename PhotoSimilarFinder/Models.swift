@@ -190,8 +190,23 @@ class ImageScanner {
             }
             .sorted { $0.bestScore > $1.bestScore }
 
+        // Collect all shots that were not grouped (cluster size == 1) into a single "Ungrouped" group
+        let ungroupedFiles: [ImageFile] = clusterIndices
+            .filter { $0.count == 1 }
+            .flatMap { shots[$0[0]].allFiles }
+            .sorted { $0.filename.localizedStandardCompare($1.filename) == .orderedAscending }
+
+        var result = groups
+        if !ungroupedFiles.isEmpty {
+            result.insert(ImageGroup(
+                files: ungroupedFiles,
+                groupLabel: "No Similar Matches",
+                bestScore: 0
+            ), at: 0)
+        }
+
         await progress(1.0, "")
-        return groups
+        return result
     }
 
     // MARK: - Private helpers

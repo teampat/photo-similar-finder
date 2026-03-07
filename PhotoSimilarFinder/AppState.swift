@@ -22,6 +22,9 @@ class AppState: ObservableObject {
     // Grid thumbnail size (shared across all grid views)
     @Published var thumbnailSize: CGFloat = 200
 
+    // Navigation state for All Photos view
+    @Published var showAllPhotos: Bool = true
+
     /// Number of photos (unique stems) marked for deletion.
     /// 1 JPG + 1 CR3 with the same name = 1 photo
     var totalMarked: Int {
