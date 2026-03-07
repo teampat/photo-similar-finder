@@ -299,6 +299,7 @@ struct GroupListView: View {
                         .tag(index)
                         .listRowInsets(EdgeInsets(top: 3, leading: 6, bottom: 3, trailing: 6))
                         .onTapGesture(count: 1) {
+                            state.showAllPhotos = false
                             state.selectedGroupIndex = index
                         }
                         .simultaneousGesture(

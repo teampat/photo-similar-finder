@@ -523,10 +523,11 @@ struct FilmStripThumb: View {
             .overlay(
                 RoundedRectangle(cornerRadius: 6)
                     .stroke(
-                        isMarked ? Color.red : (isSelected ? Color.blue : Color.clear),
+                        isSelected ? Color.white : (isMarked ? Color.red : Color.clear),
                         lineWidth: (isSelected || isMarked) ? 3 : 2
                     )
             )
+            .shadow(color: isSelected ? Color.accentColor.opacity(0.8) : .clear, radius: 6)
 
             // Delete indicator
             if isMarked {
