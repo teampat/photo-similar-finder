@@ -79,8 +79,8 @@ struct ImageGroup: Identifiable {
                 if $0.isJpeg != $1.isJpeg { return !$0.isJpeg }
                 return false
             }
-            let primary = sorted.first(where: { $0.isRaw })
-                ?? sorted.first(where: { $0.isJpeg })
+            let primary = sorted.first(where: { $0.isJpeg })
+                ?? sorted.first(where: { !$0.isRaw })
                 ?? first
             let idx = files.firstIndex(where: { $0.id == primary.id }) ?? 0
             return DisplaySlot(id: primary.id, primaryFile: primary, allFiles: sorted, fileIndex: idx)

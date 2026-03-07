@@ -148,6 +148,7 @@ codesign \
   --force \
   --timestamp \
   --options runtime \
+  --entitlements "$PROJ_DIR/PhotoSimilarFinder/PhotoSimilarFinder.entitlements" \
   "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 
 codesign \
@@ -155,6 +156,7 @@ codesign \
   --force \
   --timestamp \
   --options runtime \
+  --entitlements "$PROJ_DIR/PhotoSimilarFinder/PhotoSimilarFinder.entitlements" \
   "$APP_BUNDLE"
 
 echo "  ✓ Signed (ad-hoc)"

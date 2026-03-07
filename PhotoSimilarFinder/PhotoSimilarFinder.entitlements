@@ -2,7 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- Read-only access to user-selected files (from NSOpenPanel) -->
+	<!-- Read/write access to user-selected files (from NSOpenPanel) — needed for trashItem -->
 	<key>com.apple.security.files.user-selected.read-write</key>
 	<true/>
 	<!-- App Sandbox disabled for development — file system access without restrictions -->
