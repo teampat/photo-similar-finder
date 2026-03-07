@@ -181,6 +181,7 @@ class ImageScanner {
             .compactMap { (ci, idxs) -> ImageGroup? in
                 guard idxs.count >= 2 else { return nil }
                 let allFiles = idxs.flatMap { shots[$0].allFiles }
+                    .sorted { $0.filename.localizedStandardCompare($1.filename) == .orderedAscending }
                 return ImageGroup(
                     files: allFiles,
                     groupLabel: allFiles[0].stem,
@@ -225,7 +226,8 @@ class ImageScanner {
         for (key, group) in stemMap {
             if group.count > 1 {
                 let label = URL(fileURLWithPath: key).lastPathComponent
-                multi.append(ImageGroup(files: group, groupLabel: label))
+                let sorted = group.sorted { $0.filename.localizedStandardCompare($1.filename) == .orderedAscending }
+                multi.append(ImageGroup(files: sorted, groupLabel: label))
             } else {
                 singles.append(group[0])
             }
